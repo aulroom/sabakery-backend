@@ -1,5 +1,17 @@
+// src/config/database.js
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
+
+// Logika Pintar: Kalau di Cloud (bukan localhost), nyalakan SSL. Kalau di laptop, matikan.
+let sslOptions = {};
+if (process.env.DB_HOST && process.env.DB_HOST !== 'localhost') {
+    sslOptions = {
+        ssl: {
+            require: true,
+            rejectUnauthorized: false // Wajib untuk server cloud (Render, Supabase, Neon, dll)
+        }
+    };
+}
 
 const sequelize = new Sequelize(
     process.env.DB_NAME,
@@ -10,6 +22,7 @@ const sequelize = new Sequelize(
         port: process.env.DB_PORT || 5432,
         dialect: 'postgres',
         logging: console.log,
+        dialectOptions: sslOptions, // <== Tameng SSL dipasang di sini
         pool: {
             max: 10,
             min: 0,
