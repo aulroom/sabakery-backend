@@ -2,6 +2,10 @@
 const { Food } = require('../models');
 const { Op } = require('sequelize');
 
+// CATATAN: Pastikan kamu meng-import konfigurasi Cloudinary kamu di sini.
+// Sesuaikan path-nya jika kamu membuat file konfigurasi terpisah (misal: require('../config/cloudinary'))
+const cloudinary = require('cloudinary').v2; 
+
 // ==========================================
 // GET ALL FOODS (dengan pagination & filter)
 // ==========================================
@@ -132,19 +136,25 @@ exports.searchFoods = async (req, res) => {
 };
 
 // ==========================================
-// CREATE FOOD (Dengan Upload File Komputer)
+// CREATE FOOD (Pakai Cloudinary)
 // ==========================================
 exports.createFood = async (req, res) => {
     try {
         const { name, description, category, price, restaurant, is_available } = req.body;
         
-        // Logika Multer: Jika ada file dari komputer, buatkan link lokalnya. 
-        // Jika tidak ada, pakai link URL yang diketik (opsional)
-        let finalImageUrl = req.body.image_url; 
+        let finalImageUrl = req.body.image_url || ""; 
         
         if (req.file) {
-            // Karena server backend-mu jalan di port 5000, kita buatkan link lengkapnya
-            finalImageUrl = `http://127.0.0.1:5000/uploads/${req.file.filename}`;
+            // Ubah buffer ke base64 (karena pakai memoryStorage)
+            const fileStr = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+
+            // Upload ke Cloudinary
+            const uploadedResponse = await cloudinary.uploader.upload(fileStr, {
+                folder: 'sabakery'
+            });
+            
+            // Ambil URL aman dari Cloudinary
+            finalImageUrl = uploadedResponse.secure_url;
         }
 
         // Validasi
@@ -161,21 +171,19 @@ exports.createFood = async (req, res) => {
             category,
             price,
             restaurant,
-            image_url: finalImageUrl, // Masukkan link gambar final ke database
+            image_url: finalImageUrl, 
             is_available: is_available !== undefined ? is_available : true
         });
 
         res.status(201).json({
             success: true,
-            message: 'Makanan dan foto berhasil ditambahkan',
-            data: newFood
+            data: newFood // Sesuai dengan respons pada gambar
         });
     } catch (error) {
         console.error('Create food error:', error);
         res.status(500).json({
             success: false,
-            message: 'Gagal menambah makanan',
-            error: error.message
+            message: error.message || 'Gagal menambah makanan'
         });
     }
 };
@@ -195,6 +203,9 @@ exports.updateFood = async (req, res) => {
                 message: 'Makanan tidak ditemukan'
             });
         }
+
+        // Catatan: Jika update juga butuh upload foto baru, 
+        // kamu bisa menambahkan logika Cloudinary yang sama di sini ke depannya.
 
         await food.update({
             name: name || food.name,
