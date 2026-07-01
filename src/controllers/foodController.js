@@ -1,5 +1,5 @@
 // src/controllers/foodController.js
-const { Food } = require('../models/Index.js');
+const { Food } = require('../models');
 const { Op } = require('sequelize');
 
 // ==========================================
