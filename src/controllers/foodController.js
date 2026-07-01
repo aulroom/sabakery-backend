@@ -1,15 +1,22 @@
 // src/controllers/foodController.js
 const { Food } = require('../models');
 const { Op } = require('sequelize');
+const cloudinary = require('cloudinary').v2;
 
-// CATATAN: Pastikan kamu meng-import konfigurasi Cloudinary kamu di sini.
-// Sesuaikan path-nya jika kamu membuat file konfigurasi terpisah (misal: require('../config/cloudinary'))
-const cloudinary = require('cloudinary').v2; 
+// ==========================================
+// KONFIGURASI CLOUDINARY
+// ==========================================
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // ==========================================
 // GET ALL FOODS (dengan pagination & filter)
 // ==========================================
 exports.getAllFoods = async (req, res) => {
+// ... (lanjutkan kodingan yang bawahnya sama persis seperti sebelumnya) ...
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
