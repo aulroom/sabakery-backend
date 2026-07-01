@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan('dev'));
 app.use(generalLimiter);
 
-const routes = require('./routes/index.js');
+const routes = require('./routes/Index.js');
 
 // Membuka gembok folder uploads agar gambar Multer bisa dibaca oleh Frontend React
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
