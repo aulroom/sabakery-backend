@@ -1,6 +1,10 @@
 const corsOptions = {
     origin: (origin, callback) => {
-        const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['http://localhost:5173'];
+        // 🔥 TAMBAHKAN LINK VERCEL DI SINI (Di dalam kurung siku bersama localhost)
+        const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [
+            'http://localhost:5173', 
+            'https://sabakery-frontend.vercel.app' // Ini tiket masuk buat Vercel!
+        ];
         
         if (!origin || allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
