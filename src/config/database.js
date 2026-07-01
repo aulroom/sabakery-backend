@@ -2,35 +2,46 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
-// Logika Pintar: Kalau di Cloud (bukan localhost), nyalakan SSL. Kalau di laptop, matikan.
-let sslOptions = {};
-if (process.env.DB_HOST && process.env.DB_HOST !== 'localhost') {
-    sslOptions = {
-        ssl: {
-            require: true,
-            rejectUnauthorized: false // Wajib untuk server cloud (Render, Supabase, Neon, dll)
-        }
-    };
-}
+let sequelize;
 
-const sequelize = new Sequelize(
-    process.env.DB_NAME,
-    process.env.DB_USER,
-    process.env.DB_PASSWORD,
-    {
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 5432,
+// JURUS ULTIMATE: Kalau di Render (Cloud), kita pakai 1 Link Full (DATABASE_URL)
+if (process.env.DATABASE_URL) {
+    sequelize = new Sequelize(process.env.DATABASE_URL, {
         dialect: 'postgres',
         logging: console.log,
-        dialectOptions: sslOptions, // <== Tameng SSL dipasang di sini
+        dialectOptions: {
+            ssl: {
+                require: true,
+                rejectUnauthorized: false
+            }
+        },
         pool: {
             max: 10,
             min: 0,
             acquire: 30000,
             idle: 10000
         }
-    }
-);
+    });
+} else {
+    // Kalau di laptop (lokal), tetap pakai yang lama
+    sequelize = new Sequelize(
+        process.env.DB_NAME,
+        process.env.DB_USER,
+        process.env.DB_PASSWORD,
+        {
+            host: process.env.DB_HOST || 'localhost',
+            port: process.env.DB_PORT || 5432,
+            dialect: 'postgres',
+            logging: console.log,
+            pool: {
+                max: 10,
+                min: 0,
+                acquire: 30000,
+                idle: 10000
+            }
+        }
+    );
+}
 
 const connectDB = async () => {
     try {
