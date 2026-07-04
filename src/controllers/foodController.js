@@ -1,5 +1,6 @@
 // src/controllers/foodController.js
-const { Food } = require('../models');
+// TAMBAHAN: Kita meng-import 'sequelize' agar bisa menjalankan Raw Query
+const { Food, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const cloudinary = require('cloudinary').v2;
 
@@ -16,14 +17,12 @@ cloudinary.config({
 // GET ALL FOODS (dengan pagination & filter)
 // ==========================================
 exports.getAllFoods = async (req, res) => {
-// ... (lanjutkan kodingan yang bawahnya sama persis seperti sebelumnya) ...
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const offset = (page - 1) * limit;
         const { category, restaurant, minPrice, maxPrice, search } = req.query;
 
-        // Build where clause
         const where = { is_available: true };
         
         if (category) where.category = category;
@@ -41,7 +40,6 @@ exports.getAllFoods = async (req, res) => {
             if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
         }
 
-        // Query database
         const { count, rows } = await Food.findAndCountAll({
             where,
             order: [['created_at', 'DESC']],
@@ -101,30 +99,27 @@ exports.getFoodById = async (req, res) => {
 };
 
 // ==========================================
-// SEARCH FOODS
+// SEARCH FOODS (DIBUAT RENTAN UNTUK DEMO SQLi)
 // ==========================================
 exports.searchFoods = async (req, res) => {
     try {
         const { query } = req.query;
         
-        if (!query || query.length < 2) {
+        if (!query) {
             return res.status(400).json({
                 success: false,
-                message: 'Kata kunci minimal 2 karakter'
+                message: 'Kata kunci pencarian tidak boleh kosong'
             });
         }
 
-        const foods = await Food.findAll({
-            where: {
-                [Op.or]: [
-                    { name: { [Op.iLike]: `%${query}%` } },
-                    { description: { [Op.iLike]: `%${query}%` } },
-                    { category: { [Op.iLike]: `%${query}%` } },
-                    { restaurant: { [Op.iLike]: `%${query}%` } }
-                ],
-                is_available: true
-            },
-            limit: 50
+        // ❌ KODINGAN BERBAHAYA (SENGAJA DIBUAT RENTAN SQLi) ❌
+        // Input dari user langsung digabung ke dalam query SQL tanpa sanitasi
+        // Catatan: Jika nama tabel di database huruf kecil (foods), ubah "Foods" jadi foods
+        const rawSql = "SELECT * FROM \"Foods\" WHERE name LIKE '%" + query + "%'";
+        
+        // Mengeksekusi query mentah
+        const foods = await sequelize.query(rawSql, {
+            type: sequelize.QueryTypes.SELECT
         });
 
         res.json({
@@ -152,19 +147,13 @@ exports.createFood = async (req, res) => {
         let finalImageUrl = req.body.image_url || ""; 
         
         if (req.file) {
-            // Ubah buffer ke base64 (karena pakai memoryStorage)
             const fileStr = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-
-            // Upload ke Cloudinary
             const uploadedResponse = await cloudinary.uploader.upload(fileStr, {
                 folder: 'sabakery'
             });
-            
-            // Ambil URL aman dari Cloudinary
             finalImageUrl = uploadedResponse.secure_url;
         }
 
-        // Validasi
         if (!name || !price) {
             return res.status(400).json({
                 success: false,
@@ -184,7 +173,7 @@ exports.createFood = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            data: newFood // Sesuai dengan respons pada gambar
+            data: newFood
         });
     } catch (error) {
         console.error('Create food error:', error);
@@ -210,9 +199,6 @@ exports.updateFood = async (req, res) => {
                 message: 'Makanan tidak ditemukan'
             });
         }
-
-        // Catatan: Jika update juga butuh upload foto baru, 
-        // kamu bisa menambahkan logika Cloudinary yang sama di sini ke depannya.
 
         await food.update({
             name: name || food.name,
